@@ -1,0 +1,29 @@
+name = "notagain-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[durable_objects]
+bindings = [
+  { name = "THRON_COUNTER", class_name = "ThronCounter" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ThronCounter"]
+
+# KV namespace IDs will be filled after running:
+#   npx wrangler kv:namespace create SESSIONS
+#   npx wrangler kv:namespace create CACHE
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "PLACEHOLDER_SESSIONS_ID"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "PLACEHOLDER_CACHE_ID"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+ALLOWED_ORIGIN = "https://notagain.one"

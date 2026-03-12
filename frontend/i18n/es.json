@@ -1,0 +1,76 @@
+{
+  "counter": {
+    "prefix": "Ahora mismo,",
+    "suffix": "parejas están en el baño",
+    "live": "En vivo mundial"
+  },
+  "session": {
+    "label": "Tu pareja lleva ahí dentro",
+    "othersWaiting": "Otras {count} personas también están esperando"
+  },
+  "button": {
+    "mineToo": "¡La mía también! 🚽",
+    "theyreBack": "¡Ya salió! 🎉",
+    "falseAlarm": "Falsa alarma 😅",
+    "share": "Compartir",
+    "dismiss": "Cerrar"
+  },
+  "stats": {
+    "title": "Tus datos",
+    "sessions": "Total sesiones",
+    "longest": "La más larga",
+    "average": "Promedio",
+    "streak": "Racha de días"
+  },
+  "leaderboard": {
+    "title": "¿Quién tira más de la cadena hoy?",
+    "you": "tú"
+  },
+  "tagline": "Está en el baño. Otra vez.",
+  "toast": {
+    "falseAlarm": "¡Sin problema! Sesión cancelada.",
+    "copied": "¡Copiado al portapapeles! 📋",
+    "copyFailed": "No se pudo copiar. ¡Inténtalo de nuevo!"
+  },
+  "share": {
+    "text": "Ahora mismo {count} parejas están en el trono. La mía es una de ellas. 🚽 notagain.one"
+  },
+  "wittySubtexts": [
+    "Hay {count} personas mirando el móvil en vez de tocar la puerta.",
+    "{count} personas preguntándose si se cayeron dentro.",
+    "Solidaridad. Estamos juntas en esto. Bueno, ellos están ahí dentro.",
+    "Horas pico del trono: 7–9am, 6–8pm. Como un reloj.",
+    "Alguien en Auckland acaba de pulsar '¡La mía también!' El trono es universal.",
+    "La visita promedio dura 8 minutos. Tu pareja no opina lo mismo.",
+    "{count} personas esperando. Y ninguna va a tocar la puerta.",
+    "Dato curioso: el cerrojo del baño se inventó en 1852. ¿Coincidencia?",
+    "En algún lugar ahora mismo, un cargador de móvil está siendo secuestrado.",
+    "Dijo dos minutos. Eso fue hace doce minutos.",
+    "Esto está bien. Todo está bien. 🙂"
+  ],
+  "timeComments": [
+    { "min": 0, "text": "Recién empezó. Dale tiempo..." },
+    { "min": 2, "text": "2 minutos. Todavía plausible." },
+    { "min": 5, "text": "5 minutos. Aún dentro del rango normal. Apenas." },
+    { "min": 8, "text": "8 minutos. El promedio nacional. Tu pareja se ríe de los promedios." },
+    { "min": 10, "text": "10 minutos. Encontró su móvil. Se acabó." },
+    { "min": 15, "text": "15 min. Eso es más largo que la mayoría de charlas TED." },
+    { "min": 20, "text": "20 min. Puede que esté leyendo Guerra y Paz ahí dentro." },
+    { "min": 25, "text": "25 min. A este punto es una elección de vida." },
+    { "min": 30, "text": "30 min. Más largo que un episodio de The Office." },
+    { "min": 40, "text": "40 min. Esto podría ser un nuevo récord personal." },
+    { "min": 45, "text": "45 min. ¿Deberíamos enviar un equipo de rescate?" },
+    { "min": 60, "text": "Una hora. Cuenta la leyenda que sigue ahí dentro..." }
+  ],
+  "endMessages": [
+    { "maxMin": 2, "text": "¡Eso fue rápido! Speedrun desbloqueado. 🏃" },
+    { "maxMin": 5, "text": "¿Menos de 5 minutos? Algo raro y hermoso." },
+    { "maxMin": 10, "text": "¡Nada mal! Menos de 10 minutos. Hay esperanza." },
+    { "maxMin": 15, "text": "15 minutos. Justo a tiempo." },
+    { "maxMin": 20, "text": "Un buen 20. El móvil estaba involucrado seguro." },
+    { "maxMin": 30, "text": "Clásico. No juzgamos. (Bueno, un poquito.)" },
+    { "maxMin": 45, "text": "Eso fue... minucioso. Muy minucioso." },
+    { "maxMin": 60, "text": "Empezábamos a preocuparnos. Bienvenido de vuelta a la sociedad." },
+    { "maxMin": 9999, "text": "Consideramos seriamente llamar a alguien. Bienvenido de vuelta." }
+  ]
+}
