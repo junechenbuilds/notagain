@@ -8,8 +8,11 @@ export { ThronCounter };
 function corsHeaders(env, request) {
   const origin = request?.headers?.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGIN || 'https://notagain.one';
-  // Allow the configured origin and localhost for dev
-  const isAllowed = origin === allowed || origin.startsWith('http://localhost');
+  // Allow the configured origin, *.pages.dev (Cloudflare Pages), and localhost for dev
+  const isAllowed =
+    origin === allowed ||
+    origin.endsWith('.pages.dev') ||
+    origin.startsWith('http://localhost');
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
