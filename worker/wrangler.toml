@@ -11,16 +11,9 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["ThronCounter"]
 
-# KV namespace IDs will be filled after running:
-#   npx wrangler kv:namespace create SESSIONS
-#   npx wrangler kv:namespace create CACHE
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "d5c90c72e24f47d492ae59d716bd9a9b"
-
-[[kv_namespaces]]
-binding = "CACHE"
-id = "c23248c768894554b5ee4bed3e3d8c95"
 
 [triggers]
 crons = ["*/5 * * * *"]

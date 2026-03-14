@@ -5,6 +5,8 @@ import { checkRateLimit } from './rate-limit.js';
 
 export { ThronCounter };
 
+const LEADERBOARD_KEY = 'https://cache/leaderboard';
+
 function corsHeaders(env, request) {
   const origin = request?.headers?.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGIN || 'https://notagain.one';
@@ -72,7 +74,7 @@ async function handleTap(request, env) {
 
   // Store session + invalidate leaderboard cache so next poll gets fresh data
   await createSession(env, sessionId, region, ip);
-  await env.CACHE.delete('leaderboard');
+  await caches.default.delete(LEADERBOARD_KEY);
 
   const seeded = addSeed(counts);
   return jsonResponse({
@@ -106,7 +108,7 @@ async function handleEnd(request, env) {
     body: JSON.stringify({ sessionId }),
   }));
   const counts = await doRes.json();
-  await env.CACHE.delete('leaderboard');
+  await caches.default.delete(LEADERBOARD_KEY);
 
   const seeded = addSeed(counts);
   return jsonResponse({
@@ -117,12 +119,14 @@ async function handleEnd(request, env) {
 }
 
 async function handleStats(request, env) {
-  // Try KV cache first
-  const cached = await env.CACHE.get('leaderboard', 'json');
+  const cache = caches.default;
   const continent = request.cf?.continent || 'NA';
   const userRegion = mapContinent(continent);
 
-  if (cached && cached.timestamp && Date.now() - cached.timestamp < 5000) {
+  // Try Cache API first (auto-expires via Cache-Control)
+  const cachedRes = await cache.match(LEADERBOARD_KEY);
+  if (cachedRes) {
+    const cached = await cachedRes.json();
     const seeded = addSeed(cached);
     return jsonResponse({
       globalCount: seeded.globalCount,
@@ -136,10 +140,9 @@ async function handleStats(request, env) {
   const doRes = await stub.fetch(new Request('https://do/counts', { method: 'GET' }));
   const counts = await doRes.json();
 
-  // Cache for 5 seconds
-  await env.CACHE.put('leaderboard', JSON.stringify({
-    ...counts,
-    timestamp: Date.now(),
+  // Cache for 5 seconds via Cache API (free, unlimited)
+  await cache.put(LEADERBOARD_KEY, new Response(JSON.stringify(counts), {
+    headers: { 'Cache-Control': 'max-age=5', 'Content-Type': 'application/json' },
   }));
 
   const seeded = addSeed(counts);
