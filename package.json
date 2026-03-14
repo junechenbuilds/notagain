@@ -1,0 +1,12 @@
+{
+  "name": "notagain",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npx serve frontend -l 3000",
+    "dev:worker": "cd worker && npx wrangler dev --local",
+    "deploy:frontend": "npx wrangler pages deploy frontend --project-name notagain",
+    "deploy:worker": "cd worker && npx wrangler deploy",
+    "setup:kv": "cd worker && npx wrangler kv:namespace create SESSIONS && npx wrangler kv:namespace create CACHE"
+  }
+}

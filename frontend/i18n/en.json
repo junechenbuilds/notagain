@@ -1,0 +1,76 @@
+{
+  "counter": {
+    "prefix": "Right now,",
+    "suffix": "partners are on the loo",
+    "live": "Live worldwide"
+  },
+  "session": {
+    "label": "Your partner has been in there for",
+    "othersWaiting": "{count} others are also waiting"
+  },
+  "button": {
+    "mineToo": "Mine too! 🚽",
+    "theyreBack": "They're back! 🎉",
+    "falseAlarm": "False alarm 😅",
+    "share": "Share",
+    "dismiss": "Dismiss"
+  },
+  "stats": {
+    "title": "Your Stats",
+    "sessions": "Total sessions",
+    "longest": "Longest ever",
+    "average": "Avg duration",
+    "streak": "Day streak"
+  },
+  "leaderboard": {
+    "title": "Who's flushing most today",
+    "you": "you"
+  },
+  "tagline": "He's in the bathroom. Again.",
+  "toast": {
+    "falseAlarm": "No worries! Session cancelled.",
+    "copied": "Copied to clipboard! 📋",
+    "copyFailed": "Could not copy. Try again!"
+  },
+  "share": {
+    "text": "Right now {count} partners are on the throne. Mine is one of them. 🚽 notagain.one"
+  },
+  "wittySubtexts": [
+    "That's {count} people scrolling this instead of knocking.",
+    "{count} people wondering if they fell in.",
+    "Solidarity. We're all in this together. Well, they're in there.",
+    "Peak throne hours: 7–9am, 6–8pm. Like clockwork.",
+    "Someone in Auckland just tapped Mine too. The throne is universal.",
+    "The average visit is 8 minutes. Your partner disagrees.",
+    "{count} people waiting. And not one of them is knocking.",
+    "Fun fact: the bathroom lock was invented in 1852. Coincidence?",
+    "Somewhere right now, a phone charger is being taken hostage.",
+    "They said two minutes. That was twelve minutes ago.",
+    "This is fine. Everything is fine. 🙂"
+  ],
+  "timeComments": [
+    { "min": 0, "text": "Just started. Give it time..." },
+    { "min": 2, "text": "2 minutes. Still plausible." },
+    { "min": 5, "text": "5 minutes. Still within normal range. Barely." },
+    { "min": 8, "text": "8 minutes. The national average. Your partner scoffs at averages." },
+    { "min": 10, "text": "10 minutes. They've found their phone. It's over." },
+    { "min": 15, "text": "15 min. That's longer than most TED talks." },
+    { "min": 20, "text": "20 min. They might be reading War and Peace in there." },
+    { "min": 25, "text": "25 min. At this point it's a lifestyle choice." },
+    { "min": 30, "text": "30 min. Longer than an episode of The Office." },
+    { "min": 40, "text": "40 min. This might be a new personal best." },
+    { "min": 45, "text": "45 min. Should we send a search party?" },
+    { "min": 60, "text": "An hour. Legend has it they're still in there..." }
+  ],
+  "endMessages": [
+    { "maxMin": 2, "text": "That was quick! Speed run unlocked. 🏃" },
+    { "maxMin": 5, "text": "Under 5 minutes? A rare and beautiful thing." },
+    { "maxMin": 10, "text": "Not bad! Under 10 minutes. There's hope." },
+    { "maxMin": 15, "text": "15 minutes. Right on schedule." },
+    { "maxMin": 20, "text": "A solid 20. The phone was definitely involved." },
+    { "maxMin": 30, "text": "Classic. We're not judging. (We're judging a little.)" },
+    { "maxMin": 45, "text": "That was... thorough. Very thorough." },
+    { "maxMin": 60, "text": "We were starting to worry. Welcome back to society." },
+    { "maxMin": 9999, "text": "We genuinely considered calling someone. Welcome back." }
+  ]
+}

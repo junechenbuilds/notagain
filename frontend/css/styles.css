@@ -1,0 +1,490 @@
+/* ─── Design Tokens (from design-direction.md) ─── */
+:root {
+  --bg: #0A0F14;
+  --card-bg: #111921;
+  --card-border: #1A2530;
+  --mint: #2DFFC0;
+  --muted: #5A6B7B;
+  --body-text: #9BA8B7;
+  --white: #FFFFFF;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ─── Base ─── */
+html {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--body-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+/* ─── Header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 4px;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+}
+
+.logo-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--mint);
+}
+
+.logo-tld {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--white);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 0;
+}
+
+.lang-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 150ms ease;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lang-btn.active {
+  background: var(--mint);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.lang-btn:not(.active):hover {
+  color: var(--white);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  line-height: 1;
+}
+
+.tagline {
+  font-size: 14px;
+  color: var(--muted);
+  padding-bottom: 16px;
+}
+
+/* ─── Cards ─── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+}
+
+.counter-card {
+  padding: 24px 20px;
+  text-align: center;
+}
+
+/* ─── State views (show/hide) ─── */
+.state-view {
+  display: none;
+}
+
+.state-view.active {
+  display: block;
+  animation: fadeIn 300ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Counter ─── */
+.counter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.counter-prefix {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.counter-suffix {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--white);
+  margin-top: 2px;
+}
+
+.big-number {
+  font-size: 72px;
+  font-weight: 800;
+  color: var(--mint);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 40px rgba(45, 255, 192, 0.3),
+    0 0 80px rgba(45, 255, 192, 0.1);
+  line-height: 1.1;
+  margin: 12px 0;
+  transition: transform 200ms ease;
+}
+
+.big-number.bump {
+  transform: scale(1.08);
+}
+
+.timer-number {
+  font-size: 48px;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.live-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.time-comment {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 12px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ended-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.ended-duration {
+  margin-top: 8px;
+  color: var(--body-text);
+}
+
+.mint {
+  color: var(--mint);
+  font-weight: 700;
+}
+
+/* ─── Buttons ─── */
+.button-group {
+  display: none;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.button-group.active {
+  display: flex;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--mint);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  transition: transform 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-outlined {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  background: transparent;
+  color: var(--mint);
+  border: 2px solid var(--mint);
+  cursor: pointer;
+  transition: transform 150ms ease;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-outlined:active {
+  transform: scale(0.95);
+}
+
+.btn-text {
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: transform 150ms ease;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-text:active {
+  transform: scale(0.95);
+}
+
+.btn-outlined-muted {
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: transform 150ms ease;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-outlined-muted:active {
+  transform: scale(0.95);
+}
+
+/* ─── Witty subtext ─── */
+.witty-subtext {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 12px;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+  min-height: 36px;
+}
+
+/* ─── Sections ─── */
+.section {
+  margin-top: 28px;
+}
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ─── Stats Grid ─── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-card {
+  padding: 14px 16px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--mint);
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ─── Leaderboard ─── */
+.leaderboard {
+  overflow: hidden;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-row.is-you {
+  background: rgba(45, 255, 192, 0.05);
+}
+
+.leaderboard-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaderboard-medal {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.leaderboard-emoji {
+  font-size: 18px;
+}
+
+.leaderboard-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--body-text);
+}
+
+.leaderboard-you {
+  font-size: 11px;
+  color: var(--mint);
+  background: rgba(45, 255, 192, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.leaderboard-count {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--mint);
+}
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--mint);
+  color: var(--bg);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 100;
+  animation: toastSlide 2.5s ease forwards;
+}
+
+.toast.hidden {
+  display: none;
+}
+
+@keyframes toastSlide {
+  0%   { opacity: 0; transform: translate(-50%, 10px); }
+  15%  { opacity: 1; transform: translate(-50%, 0); }
+  75%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -5px); }
+}
+
+/* ─── Responsive ─── */
+@media (min-width: 768px) {
+  .big-number {
+    font-size: 96px;
+  }
+  .timer-number {
+    font-size: 56px;
+  }
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
