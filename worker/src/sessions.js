@@ -8,10 +8,14 @@ export async function createSession(env, sessionId, region, ip) {
     ip,
   };
 
-  // Store session with 60-min TTL (backup for KV-based lookups)
-  await env.SESSIONS.put(`session:${sessionId}`, JSON.stringify(session), {
-    expirationTtl: 3600,
-  });
+  // Store session in KV (best-effort — DO is source of truth)
+  try {
+    await env.SESSIONS.put(`session:${sessionId}`, JSON.stringify(session), {
+      expirationTtl: 3600,
+    });
+  } catch {
+    // KV limit exceeded — session still tracked in DO
+  }
 
   // Track active session by IP (short TTL — cleared on end, auto-expires if browser closes)
   await cache.put(`https://cache/active/${ip}`, new Response(sessionId, {
@@ -20,7 +24,12 @@ export async function createSession(env, sessionId, region, ip) {
 }
 
 export async function endSession(env, sessionId) {
-  const raw = await env.SESSIONS.get(`session:${sessionId}`);
+  let raw;
+  try {
+    raw = await env.SESSIONS.get(`session:${sessionId}`);
+  } catch {
+    return null; // KV unavailable — DO handles decrement independently
+  }
   if (!raw) return null;
 
   const session = JSON.parse(raw);
@@ -29,7 +38,7 @@ export async function endSession(env, sessionId) {
   );
 
   // Clean up session + IP lock
-  await env.SESSIONS.delete(`session:${sessionId}`);
+  try { await env.SESSIONS.delete(`session:${sessionId}`); } catch {}
   if (session.ip) {
     await cache.delete(`https://cache/active/${session.ip}`);
   }
