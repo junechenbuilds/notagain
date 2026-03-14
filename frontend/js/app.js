@@ -23,14 +23,35 @@ async function init() {
 
   initSound();
 
-  try {
-    const data = await fetchStats();
+  // Fire initial fetch without blocking — polling will also fill in data
+  fetchStats().then((data) => {
     userRegion = data.userRegion;
     renderCounter(data.globalCount);
     renderLeaderboard(data.regionCounts, userRegion);
-  } catch {
-    renderCounter(0);
-    renderLeaderboard({ americas: 0, europe: 0, asiaPacific: 0 }, 'americas');
+  }).catch(() => {});
+
+  // Recover active session after page refresh
+  const saved = localStorage.getItem('notagain_session');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      const elapsed = Math.floor((Date.now() - s.startedAt) / 1000);
+      // Only recover if session is less than 60 minutes old
+      if (elapsed < 3600) {
+        sessionId = s.sessionId;
+        userRegion = s.region;
+        state = 'active';
+        showState('active');
+        startTimer((seconds) => {
+          document.getElementById('session-timer').textContent = formatTimeLong(seconds);
+          document.getElementById('time-comment').textContent = getTimeComment(seconds);
+        }, elapsed);
+      } else {
+        localStorage.removeItem('notagain_session');
+      }
+    } catch {
+      localStorage.removeItem('notagain_session');
+    }
   }
 
   startPolling();
@@ -87,24 +108,34 @@ async function handleLangChange(e) {
 }
 
 async function handleMineToo() {
+  // Optimistic UI — show active state instantly, don't wait for API
+  animateBump();
+  playFlush();
+  state = 'active';
+  showState('active');
+  startTimer((seconds) => {
+    document.getElementById('session-timer').textContent = formatTimeLong(seconds);
+    document.getElementById('time-comment').textContent = getTimeComment(seconds);
+  });
+
   try {
     const data = await postTap();
     sessionId = data.sessionId;
     userRegion = data.region;
 
-    animateBump();
+    localStorage.setItem('notagain_session', JSON.stringify({
+      sessionId,
+      region: data.region,
+      startedAt: Date.now(),
+    }));
+
     renderCounter(data.globalCount);
     renderLeaderboard(data.regionCounts, data.region);
-    playFlush();
-
-    state = 'active';
-    showState('active');
-
-    startTimer((seconds) => {
-      document.getElementById('session-timer').textContent = formatTimeLong(seconds);
-      document.getElementById('time-comment').textContent = getTimeComment(seconds);
-    });
   } catch (err) {
+    // Roll back optimistic UI on failure
+    stopTimer();
+    state = 'idle';
+    showState('idle');
     showToast(err.message || 'Something went wrong');
   }
 }
@@ -113,54 +144,50 @@ async function handleEnd() {
   if (!sessionId) return;
 
   const currentSeconds = getSessionSeconds();
+  const endingSessionId = sessionId;
   stopTimer();
 
+  // Optimistic UI — show ended state instantly
+  document.getElementById('final-duration').textContent = formatTimeLong(currentSeconds);
+  document.getElementById('end-message').textContent = getEndMessage(currentSeconds);
+  state = 'ended';
+  showState('ended');
+  saveSession(currentSeconds);
+  renderStats(getStats());
+  sessionId = null;
+  localStorage.removeItem('notagain_session');
+
+  // Fire API in background — update counts if it succeeds
   try {
-    const data = await postEnd(sessionId);
-    const duration = data.duration || currentSeconds;
-
-    document.getElementById('final-duration').textContent = formatTimeLong(duration);
-    document.getElementById('end-message').textContent = getEndMessage(duration);
-
-    state = 'ended';
-    showState('ended');
+    const data = await postEnd(endingSessionId);
     renderCounter(data.globalCount);
     renderLeaderboard(data.regionCounts, userRegion);
-
-    saveSession(duration);
-    renderStats(getStats());
   } catch {
-    // Even if API fails, end the session locally
-    document.getElementById('final-duration').textContent = formatTimeLong(currentSeconds);
-    document.getElementById('end-message').textContent = getEndMessage(currentSeconds);
-
-    state = 'ended';
-    showState('ended');
-
-    saveSession(currentSeconds);
-    renderStats(getStats());
+    // Silent fail — counter will self-correct on next poll
   }
-
-  sessionId = null;
 }
 
 async function handleFalseAlarm() {
   if (!sessionId) return;
 
+  const endingSessionId = sessionId;
   stopTimer();
 
+  // Optimistic UI — show idle state instantly
+  sessionId = null;
+  state = 'idle';
+  showState('idle');
+  localStorage.removeItem('notagain_session');
+  showToast(t('toast.falseAlarm') || 'No worries! Session cancelled.');
+
+  // Fire API in background
   try {
-    const data = await postEnd(sessionId);
+    const data = await postEnd(endingSessionId);
     renderCounter(data.globalCount);
     renderLeaderboard(data.regionCounts, userRegion || data.userRegion);
   } catch {
     // Silent fail — counter will self-correct on next poll
   }
-
-  sessionId = null;
-  state = 'idle';
-  showState('idle');
-  showToast(t('toast.falseAlarm') || 'No worries! Session cancelled.');
 }
 
 function handleShare() {
