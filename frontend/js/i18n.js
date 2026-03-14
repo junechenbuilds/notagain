@@ -4,9 +4,17 @@ let strings = {};
 let currentLang = 'en';
 
 export async function initI18n() {
+  const supported = ['en', 'zh', 'es'];
+  const urlLang = new URLSearchParams(location.search).get('lang');
   const stats = loadStats();
   const browserLang = navigator.language?.slice(0, 2) || 'en';
-  currentLang = stats.lang || (['en', 'zh', 'es'].includes(browserLang) ? browserLang : 'en');
+
+  if (urlLang && supported.includes(urlLang)) {
+    currentLang = urlLang;
+    saveLangPreference(urlLang);
+  } else {
+    currentLang = stats.lang || (supported.includes(browserLang) ? browserLang : 'en');
+  }
 
   await loadLanguage(currentLang);
   applyTranslations();

@@ -1,5 +1,7 @@
-// Auto-detect: localhost dev uses worker on port 8787, production uses same-origin
-const API_BASE = location.hostname === 'localhost' ? 'http://localhost:8787' : '';
+// Auto-detect: localhost dev uses worker on port 8787, production uses Cloudflare Worker
+const API_BASE = location.hostname === 'localhost'
+  ? 'http://localhost:8787'
+  : 'https://notagain-api.junechenbuilds.workers.dev';
 
 export async function fetchStats() {
   const res = await fetch(`${API_BASE}/api/stats`);

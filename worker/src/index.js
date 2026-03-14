@@ -8,8 +8,11 @@ export { ThronCounter };
 function corsHeaders(env, request) {
   const origin = request?.headers?.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGIN || 'https://notagain.one';
-  // Allow the configured origin and localhost for dev
-  const isAllowed = origin === allowed || origin.startsWith('http://localhost');
+  // Allow the configured origin, *.pages.dev (Cloudflare Pages), and localhost for dev
+  const isAllowed =
+    origin === allowed ||
+    origin.endsWith('.pages.dev') ||
+    origin.startsWith('http://localhost');
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -24,9 +27,27 @@ function jsonResponse(data, env, status = 200, request = null) {
   });
 }
 
+const SEED_COUNT = 50;
+
 function getCounterStub(env) {
   const id = env.THRON_COUNTER.idFromName('global');
   return env.THRON_COUNTER.get(id);
+}
+
+// Seed splits: 17 + 15 + 18 = 50
+const SEED_AMERICAS = 17;
+const SEED_EUROPE = 15;
+const SEED_ASIA_PACIFIC = 18;
+
+function addSeed(counts) {
+  return {
+    globalCount: counts.globalCount + SEED_COUNT,
+    regionCounts: {
+      americas: counts.regionCounts.americas + SEED_AMERICAS,
+      europe: counts.regionCounts.europe + SEED_EUROPE,
+      asiaPacific: counts.regionCounts.asiaPacific + SEED_ASIA_PACIFIC,
+    },
+  };
 }
 
 async function handleTap(request, env) {
@@ -41,11 +62,11 @@ async function handleTap(request, env) {
   const region = mapContinent(continent);
   const sessionId = crypto.randomUUID();
 
-  // Increment counter
+  // Increment counter (DO also tracks the session internally)
   const stub = getCounterStub(env);
   const doRes = await stub.fetch(new Request('https://do/increment', {
     method: 'POST',
-    body: JSON.stringify({ region }),
+    body: JSON.stringify({ region, sessionId }),
   }));
   const counts = await doRes.json();
 
@@ -53,11 +74,12 @@ async function handleTap(request, env) {
   await createSession(env, sessionId, region, ip);
   await env.CACHE.delete('leaderboard');
 
+  const seeded = addSeed(counts);
   return jsonResponse({
     sessionId,
-    globalCount: counts.globalCount,
+    globalCount: seeded.globalCount,
     region,
-    regionCounts: counts.regionCounts,
+    regionCounts: seeded.regionCounts,
   }, env, 200, request);
 }
 
@@ -74,24 +96,23 @@ async function handleEnd(request, env) {
     return jsonResponse({ error: 'sessionId required' }, env, 400, request);
   }
 
+  // Clean up KV session + IP lock
   const result = await endSession(env, sessionId);
-  if (!result) {
-    return jsonResponse({ error: 'Session not found or already ended' }, env, 404, request);
-  }
 
-  // Decrement counter + invalidate leaderboard cache
+  // Decrement counter in DO (DO has its own session map — always try)
   const stub = getCounterStub(env);
   const doRes = await stub.fetch(new Request('https://do/decrement', {
     method: 'POST',
-    body: JSON.stringify({ region: result.region }),
+    body: JSON.stringify({ sessionId }),
   }));
   const counts = await doRes.json();
   await env.CACHE.delete('leaderboard');
 
+  const seeded = addSeed(counts);
   return jsonResponse({
-    globalCount: counts.globalCount,
-    duration: result.duration,
-    regionCounts: counts.regionCounts,
+    globalCount: seeded.globalCount,
+    duration: result?.duration || 0,
+    regionCounts: seeded.regionCounts,
   }, env, 200, request);
 }
 
@@ -102,9 +123,10 @@ async function handleStats(request, env) {
   const userRegion = mapContinent(continent);
 
   if (cached && cached.timestamp && Date.now() - cached.timestamp < 5000) {
+    const seeded = addSeed(cached);
     return jsonResponse({
-      globalCount: cached.globalCount,
-      regionCounts: cached.regionCounts,
+      globalCount: seeded.globalCount,
+      regionCounts: seeded.regionCounts,
       userRegion,
     }, env);
   }
@@ -120,9 +142,10 @@ async function handleStats(request, env) {
     timestamp: Date.now(),
   }));
 
+  const seeded = addSeed(counts);
   return jsonResponse({
-    globalCount: counts.globalCount,
-    regionCounts: counts.regionCounts,
+    globalCount: seeded.globalCount,
+    regionCounts: seeded.regionCounts,
     userRegion,
   }, env, 200, request);
 }

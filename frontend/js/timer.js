@@ -2,9 +2,10 @@ let timerInterval = null;
 let seconds = 0;
 let callback = null;
 
-export function startTimer(onTick) {
-  seconds = 0;
+export function startTimer(onTick, initialSeconds = 0) {
+  seconds = initialSeconds;
   callback = onTick;
+  if (seconds > 0 && callback) callback(seconds);
   timerInterval = setInterval(() => {
     seconds += 1;
     if (callback) callback(seconds);
