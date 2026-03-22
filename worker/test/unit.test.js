@@ -1,16 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ─── geo.js tests ──────────────────────────────────────────
-// Can't import ES module directly in node:test, so inline the logic
-const CONTINENT_MAP = {
-  NA: 'americas', SA: 'americas',
-  EU: 'europe', AF: 'europe',
-  AS: 'asiaPacific', OC: 'asiaPacific', AN: 'asiaPacific',
-};
-function mapContinent(cfContinent) {
-  return CONTINENT_MAP[cfContinent] || 'americas';
-}
+// Import the real module instead of reimplementing
+import { mapContinent } from '../src/geo.js';
 
 describe('geo.js — mapContinent', () => {
   it('maps North America to americas', () => {
@@ -49,94 +45,91 @@ describe('geo.js — mapContinent', () => {
 });
 
 // ─── rate-limit.js tests ───────────────────────────────────
-// Mock KV store
-function createMockKV() {
+// Rate limiting uses Cloudflare Cache API which isn't available in node:test.
+// The real module requires `caches.default` (a Workers global), so we can't
+// import it directly in Node. We test the logic with a mock that mirrors
+// the Cache API interface the function uses (match/put).
+
+// Mock Cache API store (mirrors caches.default.match/put)
+function createMockCacheApi() {
   const store = {};
   return {
-    get: async (key) => store[key] ?? null,
-    put: async (key, value) => { store[key] = value; },
+    match: async (key) => store[key] ?? null,
+    put: async (key, response) => { store[key] = response; },
     delete: async (key) => { delete store[key]; },
     _store: store,
   };
 }
 
-async function checkRateLimit(env, ip) {
-  const activeSession = await env.CACHE.get(`active:${ip}`);
-  if (activeSession) {
-    return { limited: true, reason: 'You already have an active session' };
-  }
-  const hourKey = `ratelimit:${ip}`;
-  const countRaw = await env.CACHE.get(hourKey);
-  const count = countRaw ? parseInt(countRaw, 10) : 0;
+// Reimplement to match rate-limit.js logic (Cache API version)
+// NOTE: We can't import the real module because it references `caches.default`
+// which doesn't exist in Node. This is a known limitation — for full coverage,
+// use Miniflare or wrangler dev integration tests.
+async function checkRateLimit(cache, ipHash) {
+  const hourKey = `https://cache/ratelimit/${ipHash}`;
+  const hourRes = await cache.match(hourKey);
+  const count = hourRes ? parseInt(await hourRes.text(), 10) : 0;
+
   if (count >= 30) {
     return { limited: true, reason: 'Too many sessions. Try again later.' };
   }
-  await env.CACHE.put(hourKey, String(count + 1));
+
+  await cache.put(hourKey, new Response(String(count + 1), {
+    headers: { 'Cache-Control': 'max-age=3600' },
+  }));
+
   return { limited: false };
 }
 
 describe('rate-limit.js — checkRateLimit', () => {
-  it('allows first request from an IP', async () => {
-    const env = { CACHE: createMockKV() };
-    const result = await checkRateLimit(env, '1.2.3.4');
+  it('allows first request from an IP hash', async () => {
+    const cache = createMockCacheApi();
+    const result = await checkRateLimit(cache, 'abc123hash');
     assert.equal(result.limited, false);
   });
 
-  it('blocks if IP already has an active session', async () => {
-    const env = { CACHE: createMockKV() };
-    await env.CACHE.put('active:1.2.3.4', 'session-123');
-
-    const result = await checkRateLimit(env, '1.2.3.4');
-    assert.equal(result.limited, true);
-    assert.match(result.reason, /active session/);
-  });
-
   it('blocks after 30 sessions per hour', async () => {
-    const env = { CACHE: createMockKV() };
-    await env.CACHE.put('ratelimit:1.2.3.4', '30');
+    const cache = createMockCacheApi();
+    await cache.put('https://cache/ratelimit/abc123hash', new Response('30'));
 
-    const result = await checkRateLimit(env, '1.2.3.4');
+    const result = await checkRateLimit(cache, 'abc123hash');
     assert.equal(result.limited, true);
     assert.match(result.reason, /Too many/);
   });
 
   it('allows up to 30 sessions', async () => {
-    const env = { CACHE: createMockKV() };
-    await env.CACHE.put('ratelimit:1.2.3.4', '29');
+    const cache = createMockCacheApi();
+    await cache.put('https://cache/ratelimit/abc123hash', new Response('29'));
 
-    const result = await checkRateLimit(env, '1.2.3.4');
+    const result = await checkRateLimit(cache, 'abc123hash');
     assert.equal(result.limited, false);
-    // Should have incremented to 30
-    assert.equal(env.CACHE._store['ratelimit:1.2.3.4'], '30');
   });
 
   it('increments counter on each allowed request', async () => {
-    const env = { CACHE: createMockKV() };
+    const cache = createMockCacheApi();
 
-    await checkRateLimit(env, '1.2.3.4');
-    assert.equal(env.CACHE._store['ratelimit:1.2.3.4'], '1');
+    await checkRateLimit(cache, 'abc123hash');
+    const r1 = cache._store['https://cache/ratelimit/abc123hash'];
+    assert.equal(await r1.clone().text(), '1');
 
-    await checkRateLimit(env, '1.2.3.4');
-    assert.equal(env.CACHE._store['ratelimit:1.2.3.4'], '2');
+    await checkRateLimit(cache, 'abc123hash');
+    const r2 = cache._store['https://cache/ratelimit/abc123hash'];
+    assert.equal(await r2.clone().text(), '2');
   });
 
-  it('different IPs are tracked separately', async () => {
-    const env = { CACHE: createMockKV() };
-    await env.CACHE.put('active:1.2.3.4', 'session-123');
+  it('different IP hashes are tracked separately', async () => {
+    const cache = createMockCacheApi();
+    await cache.put('https://cache/ratelimit/hash1', new Response('30'));
 
-    const result1 = await checkRateLimit(env, '1.2.3.4');
+    const result1 = await checkRateLimit(cache, 'hash1');
     assert.equal(result1.limited, true);
 
-    const result2 = await checkRateLimit(env, '5.6.7.8');
+    const result2 = await checkRateLimit(cache, 'hash2');
     assert.equal(result2.limited, false);
   });
 });
 
 // ─── i18n JSON validation ──────────────────────────────────
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const i18nDir = join(__dirname, '..', '..', 'frontend', 'i18n');
 

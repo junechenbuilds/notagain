@@ -137,7 +137,7 @@ Value: {
 TTL: 60 minutes (auto-cleanup)
 ```
 
-Session IDs are generated client-side (random UUID stored in sessionStorage — not localStorage, so each tab is independent).
+Session IDs are generated server-side (`crypto.randomUUID()` in the Worker) and returned to the client, which stores them in localStorage.
 
 **Leaderboard (KV — eventually consistent is fine)**
 
@@ -182,7 +182,7 @@ All personal data lives here. If the user clears their browser, stats reset — 
 
 ### 5.1 REST Endpoints
 
-All endpoints live on `api.notagain.one` (Cloudflare Worker).
+All endpoints are served via same-origin routing on `notagain.one/api/*` (Cloudflare Worker bound to the same domain).
 
 **POST /tap**
 Start a session ("Mine too!").
@@ -236,7 +236,7 @@ The client polls `GET /stats` every 3 seconds using `setInterval` + `fetch()`. N
 ```javascript
 // Client-side polling (simplified)
 setInterval(async () => {
-  const res = await fetch('https://api.notagain.one/stats');
+  const res = await fetch('/api/stats');
   const data = await res.json();
   updateCounterDisplay(data.globalCount, data.regionCounts);
 }, 3000);
@@ -259,7 +259,7 @@ setInterval(async () => {
 1. JS calls `POST /tap` → Worker increments Durable Object counter for global + region
 2. Worker creates session with 60-min TTL
 3. Response includes new counts + sessionId
-4. JS stores sessionId in sessionStorage (tab-scoped)
+4. JS stores sessionId in localStorage (persists across page reloads)
 5. JS starts local timer display
 6. Other clients pick up the new count on their next 3-second poll
 
@@ -321,20 +321,20 @@ Cloudflare's pricing is predictable and linear. No surprise bills.
 | KV outage | Leaderboard stale | Leaderboard is cached and eventually consistent anyway. Stale data is fine for minutes. |
 
 ### Rate Limiting
-- Max 1 active session per IP address
-- Max 10 taps per IP per hour (prevents rapid tap/end cycling)
-- Cloudflare WAF handles this at the edge — no backend code needed
+- Max 1 active session per IP address (enforced atomically in the Durable Object)
+- Max 30 taps per IP per hour (pre-filtered via KV, prevents rapid tap/end cycling)
+- Active-session enforcement happens in the DO's `/admit` endpoint to avoid race conditions
 
 ---
 
 ## 9. Security & Privacy
 
-- **No personal data on server.** Sessions are anonymous UUIDs with a region tag. No IP addresses stored.
+- **No personal data on server.** Sessions are anonymous UUIDs with a region tag. IP addresses are hashed with a server-side secret (SHA-256) before use — raw IPs are never stored or logged.
 - **No cookies.** No tracking cookies. Cloudflare Web Analytics is cookieless.
 - **HTTPS only.** Cloudflare provides free SSL.
-- **IP used only for geo detection.** Cloudflare's `cf.continent` header. The IP itself is never stored or logged.
-- **CORS:** API restricted to `notagain.one` origin only.
-- **CSP headers:** Strict Content Security Policy to prevent XSS.
+- **IP hashing for rate limiting.** `sha256(ip + secret)` is used for active-session and hourly rate-limit checks. The secret is stored as a Cloudflare secret (`IP_HASH_SECRET`).
+- **CORS:** API restricted to the production domain and localhost for development only. No wildcards.
+- **Security headers:** CSP, X-Frame-Options (DENY), Referrer-Policy (no-referrer), Permissions-Policy, X-Content-Type-Options (nosniff).
 - **No third-party scripts.** No Google Analytics, no Facebook pixel, no ad trackers.
 
 ---
