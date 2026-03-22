@@ -1,15 +1,12 @@
+// Cheap pre-filter using Cache API. The Durable Object is the true authority
+// for active-session admission (see counter.js /admit endpoint).
+// This only enforces the hourly rate cap.
+
 const cache = caches.default;
 
-export async function checkRateLimit(env, ip) {
-  // 1 active session per IP
-  const activeKey = `https://cache/active/${ip}`;
-  const activeRes = await cache.match(activeKey);
-  if (activeRes) {
-    return { limited: true, reason: 'You already have an active session' };
-  }
-
+export async function checkRateLimit(env, ipHash) {
   // Max 30 taps per hour per IP
-  const hourKey = `https://cache/ratelimit/${ip}`;
+  const hourKey = `https://cache/ratelimit/${ipHash}`;
   const hourRes = await cache.match(hourKey);
   const count = hourRes ? parseInt(await hourRes.text(), 10) : 0;
 

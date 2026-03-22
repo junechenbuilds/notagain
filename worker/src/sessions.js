@@ -1,11 +1,19 @@
 const cache = caches.default;
 const LEADERBOARD_KEY = 'https://cache/leaderboard';
 
-export async function createSession(env, sessionId, region, ip) {
+// Hash IP with a server-side secret for privacy (never store raw IPs)
+export async function hashIp(ip, secret) {
+  const data = new TextEncoder().encode(ip + (secret || ''));
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(hash);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function createSession(env, sessionId, region, ipHash) {
   const session = {
     region,
     startedAt: new Date().toISOString(),
-    ip,
+    ipHash,
   };
 
   // Store session in KV (best-effort — DO is source of truth)
@@ -17,8 +25,8 @@ export async function createSession(env, sessionId, region, ip) {
     // KV limit exceeded — session still tracked in DO
   }
 
-  // Track active session by IP (short TTL — cleared on end, auto-expires if browser closes)
-  await cache.put(`https://cache/active/${ip}`, new Response(sessionId, {
+  // Track active session by hashed IP (short TTL — cleared on end, auto-expires if browser closes)
+  await cache.put(`https://cache/active/${ipHash}`, new Response(sessionId, {
     headers: { 'Cache-Control': 'max-age=300' },
   }));
 }
@@ -39,8 +47,8 @@ export async function endSession(env, sessionId) {
 
   // Clean up session + IP lock
   try { await env.SESSIONS.delete(`session:${sessionId}`); } catch {}
-  if (session.ip) {
-    await cache.delete(`https://cache/active/${session.ip}`);
+  if (session.ipHash) {
+    await cache.delete(`https://cache/active/${session.ipHash}`);
   }
 
   return { region: session.region, duration };

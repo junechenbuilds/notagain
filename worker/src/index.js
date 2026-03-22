@@ -1,20 +1,17 @@
 import { ThronCounter } from './counter.js';
-import { createSession, endSession, expireSessions } from './sessions.js';
+import { hashIp, createSession, endSession, expireSessions } from './sessions.js';
 import { mapContinent } from './geo.js';
 import { checkRateLimit } from './rate-limit.js';
 
 export { ThronCounter };
 
 const LEADERBOARD_KEY = 'https://cache/leaderboard';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function corsHeaders(env, request) {
   const origin = request?.headers?.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGIN || 'https://notagain.one';
-  // Allow the configured origin, *.pages.dev (Cloudflare Pages), and localhost for dev
-  const isAllowed =
-    origin === allowed ||
-    origin.endsWith('.pages.dev') ||
-    origin.startsWith('http://localhost');
+  const isAllowed = origin === allowed || origin.startsWith('http://localhost');
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -22,10 +19,22 @@ function corsHeaders(env, request) {
   };
 }
 
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+};
+
 function jsonResponse(data, env, status = 200, request = null) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders(env, request) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...SECURITY_HEADERS,
+      ...corsHeaders(env, request),
+    },
   });
 }
 
@@ -54,8 +63,10 @@ function addSeed(counts) {
 
 async function handleTap(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const ipHash = await hashIp(ip, env.IP_HASH_SECRET);
 
-  const rateCheck = await checkRateLimit(env, ip);
+  // Cheap pre-filter: hourly rate limit via Cache API (not authoritative for active-session check)
+  const rateCheck = await checkRateLimit(env, ipHash);
   if (rateCheck.limited) {
     return jsonResponse({ error: rateCheck.reason }, env, 429, request);
   }
@@ -64,16 +75,26 @@ async function handleTap(request, env) {
   const region = mapContinent(continent);
   const sessionId = crypto.randomUUID();
 
-  // Increment counter (DO also tracks the session internally)
+  // Atomic admission: DO checks IP lock + increments + tracks session in one call
   const stub = getCounterStub(env);
-  const doRes = await stub.fetch(new Request('https://do/increment', {
+  const doRes = await stub.fetch(new Request('https://do/admit', {
     method: 'POST',
-    body: JSON.stringify({ region, sessionId }),
+    body: JSON.stringify({ region, sessionId, ipHash }),
   }));
+
+  if (doRes.status === 429) {
+    const err = await doRes.json();
+    return jsonResponse({ error: err.error }, env, 429, request);
+  }
+  if (doRes.status === 400) {
+    const err = await doRes.json();
+    return jsonResponse({ error: err.error }, env, 400, request);
+  }
+
   const counts = await doRes.json();
 
-  // Store session + invalidate leaderboard cache so next poll gets fresh data
-  await createSession(env, sessionId, region, ip);
+  // Store session in KV (best-effort backup) + invalidate leaderboard cache
+  await createSession(env, sessionId, region, ipHash);
   await caches.default.delete(LEADERBOARD_KEY);
 
   const seeded = addSeed(counts);
@@ -94,14 +115,14 @@ async function handleEnd(request, env) {
   }
 
   const { sessionId } = body;
-  if (!sessionId) {
-    return jsonResponse({ error: 'sessionId required' }, env, 400, request);
+  if (!sessionId || typeof sessionId !== 'string' || !UUID_RE.test(sessionId)) {
+    return jsonResponse({ error: 'Invalid sessionId' }, env, 400, request);
   }
 
   // Clean up KV session + IP lock
   const result = await endSession(env, sessionId);
 
-  // Decrement counter in DO (DO has its own session map — always try)
+  // Always tell the DO to decrement (it's the authority)
   const stub = getCounterStub(env);
   const doRes = await stub.fetch(new Request('https://do/decrement', {
     method: 'POST',
@@ -109,6 +130,10 @@ async function handleEnd(request, env) {
   }));
   const counts = await doRes.json();
   await caches.default.delete(LEADERBOARD_KEY);
+
+  if (!result && !counts.found) {
+    return jsonResponse({ error: 'Session not found or already ended' }, env, 404, request);
+  }
 
   const seeded = addSeed(counts);
   return jsonResponse({
@@ -156,7 +181,10 @@ async function handleStats(request, env) {
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(env, request) });
+      return new Response(null, {
+        status: 204,
+        headers: { ...SECURITY_HEADERS, ...corsHeaders(env, request) },
+      });
     }
 
     const url = new URL(request.url);
